@@ -20,6 +20,12 @@ def test_ignores_documentation_placeholder() -> None:
     assert find_exposed_secrets(source, ".env.example") == []
 
 
+def test_ignores_environment_variable_lookup() -> None:
+    source = 'PASSWORD = os.getenv("DATABASE_PASSWORD")'
+
+    assert find_exposed_secrets(source, "settings.py") == []
+
+
 def test_finds_private_key_without_copying_it_to_evidence() -> None:
     source = "-----BEGIN RSA PRIVATE KEY-----\nprivate-key-data"
 

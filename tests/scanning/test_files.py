@@ -10,12 +10,19 @@ def test_discovers_supported_project_files(tmp_path: Path) -> None:
     (tmp_path / "app" / "main.py").write_text("print('hello')", encoding="utf-8")
     (tmp_path / ".env.local").write_text("TOKEN=test", encoding="utf-8")
     (tmp_path / "logo.png").write_bytes(b"not source code")
+    (tmp_path / "signing.pem").write_text(
+        "-----BEGIN PRIVATE KEY-----", encoding="utf-8"
+    )
     (tmp_path / ".venv").mkdir()
     (tmp_path / ".venv" / "ignored.py").write_text("pass", encoding="utf-8")
 
     files = discover_files(tmp_path)
 
-    assert [file.relative_path for file in files] == [".env.local", "app/main.py"]
+    assert [file.relative_path for file in files] == [
+        ".env.local",
+        "signing.pem",
+        "app/main.py",
+    ]
 
 
 def test_skips_files_over_the_size_limit(tmp_path: Path) -> None:

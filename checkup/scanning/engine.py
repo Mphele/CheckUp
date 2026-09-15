@@ -3,6 +3,7 @@ from pathlib import Path
 from checkup.models import Finding, ScanError, ScanReport
 from checkup.scanning.files import discover_files
 from checkup.scanning.python import find_shell_invocations
+from checkup.scanning.secrets import find_exposed_secrets
 
 
 def scan_project(project_root: Path) -> ScanReport:
@@ -13,14 +14,13 @@ def scan_project(project_root: Path) -> ScanReport:
     files_analyzed = 0
 
     for project_file in project_files:
-        if project_file.path.suffix.lower() != ".py":
-            continue
-
         try:
             source = project_file.path.read_text(encoding="utf-8")
-            findings.extend(
-                find_shell_invocations(source, project_file.relative_path)
-            )
+            findings.extend(find_exposed_secrets(source, project_file.relative_path))
+            if project_file.path.suffix.lower() == ".py":
+                findings.extend(
+                    find_shell_invocations(source, project_file.relative_path)
+                )
             files_analyzed += 1
         except UnicodeDecodeError:
             errors.append(
@@ -51,4 +51,3 @@ def scan_project(project_root: Path) -> ScanReport:
         findings=findings,
         errors=errors,
     )
-

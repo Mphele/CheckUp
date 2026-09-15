@@ -59,6 +59,7 @@ def _is_placeholder(value: str) -> bool:
     return (
         normalized in PLACEHOLDER_VALUES
         or normalized.startswith(("example-", "test-", "dummy-"))
+        or normalized.startswith(("${", "environ.", "os.getenv(", "settings."))
         or set(normalized) <= {"x", "-", "_"}
     )
 
@@ -81,4 +82,3 @@ def _private_key_finding(relative_path: str, line_number: int) -> Finding:
             "outside the repository."
         ),
     )
-

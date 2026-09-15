@@ -14,7 +14,19 @@ IGNORED_DIRECTORIES = {
     "node_modules",
     "venv",
 }
-SCANNABLE_SUFFIXES = {".cfg", ".env", ".ini", ".json", ".py", ".toml", ".txt", ".yaml", ".yml"}
+SCANNABLE_SUFFIXES = {
+    ".cfg",
+    ".env",
+    ".ini",
+    ".json",
+    ".key",
+    ".pem",
+    ".py",
+    ".toml",
+    ".txt",
+    ".yaml",
+    ".yml",
+}
 DEFAULT_MAX_FILE_SIZE = 1_000_000
 
 
@@ -66,4 +78,3 @@ def discover_files(
 
 def _is_scannable(path: Path) -> bool:
     return path.name.startswith(".env") or path.suffix.lower() in SCANNABLE_SUFFIXES
-

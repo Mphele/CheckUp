@@ -16,7 +16,7 @@ def test_scans_python_files_and_returns_a_project_report(tmp_path: Path) -> None
 
     assert report.project_name == tmp_path.name
     assert report.files_discovered == 3
-    assert report.files_analyzed == 2
+    assert report.files_analyzed == 3
     assert len(report.findings) == 1
     assert report.findings[0].location.path == "unsafe.py"
     assert report.errors == []
@@ -32,3 +32,16 @@ def test_reports_python_files_that_cannot_be_parsed(tmp_path: Path) -> None:
     assert len(report.errors) == 1
     assert report.errors[0].path == "broken.py"
     assert "syntax error" in report.errors[0].message.lower()
+
+
+def test_scans_configuration_files_without_exposing_secret_values(
+    tmp_path: Path,
+) -> None:
+    secret = "live-secret-value-123"
+    (tmp_path / ".env").write_text(f"SECRET_KEY={secret}", encoding="utf-8")
+
+    report = scan_project(tmp_path)
+
+    assert report.files_analyzed == 1
+    assert report.findings[0].rule_id == "secrets.hardcoded-credential"
+    assert secret not in report.model_dump_json()
