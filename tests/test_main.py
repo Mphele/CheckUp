@@ -14,6 +14,15 @@ def test_health_endpoint_reports_ok() -> None:
     assert response.json() == {"status": "ok"}
 
 
+def test_dashboard_is_served() -> None:
+    client = TestClient(create_app())
+
+    response = client.get("/")
+
+    assert response.status_code == 200
+    assert "Give your project a security check-up" in response.text
+
+
 def test_scan_endpoint_returns_findings(tmp_path: Path) -> None:
     (tmp_path / "routes.py").write_text(
         "subprocess.run(command, shell=True)", encoding="utf-8"

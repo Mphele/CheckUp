@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>CheckUp</title>
+    <link rel="stylesheet" href="{{ url_for('static', path='/styles.css') }}">
+  </head>
+  <body>
+    <header class="site-header">
+      <a class="brand" href="/" aria-label="CheckUp home">
+        <span class="brand-mark">C</span>
+        <span>CheckUp</span>
+      </a>
+      <span class="local-badge">Running locally</span>
+    </header>
+
+    <main>
+      <section class="hero">
+        <p class="eyebrow">Security review for Python projects</p>
+        <h1>Give your project a security check-up.</h1>
+        <p class="intro">
+          Choose a project on this computer. CheckUp will inspect its source code
+          without running it or installing its dependencies.
+        </p>
+      </section>
+
+      <section class="scan-card" aria-labelledby="scan-heading">
+        <div>
+          <p class="step">New scan</p>
+          <h2 id="scan-heading">Select a project folder</h2>
+          <p>Enter the full path to a local Python project.</p>
+        </div>
+
+        <form id="scan-form">
+          <label for="project-path">Project path</label>
+          <div class="input-row">
+            <input
+              id="project-path"
+              name="project_path"
+              type="text"
+              placeholder="C:\Users\you\Documents\my-project"
+              autocomplete="off"
+              required
+            >
+            <button type="submit">Run check-up</button>
+          </div>
+        </form>
+      </section>
+
+      <section class="checks" aria-labelledby="checks-heading">
+        <div>
+          <p class="step">Current coverage</p>
+          <h2 id="checks-heading">What CheckUp looks for</h2>
+        </div>
+        <article>
+          <span class="check-icon">01</span>
+          <div>
+            <h3>Unsafe shell execution</h3>
+            <p>Finds Python calls that may allow command injection.</p>
+          </div>
+        </article>
+        <article class="planned">
+          <span class="check-icon">02</span>
+          <div>
+            <h3>More checks are being added</h3>
+            <p>Secrets, dependencies, and FastAPI route analysis are next.</p>
+          </div>
+        </article>
+      </section>
+    </main>
+  </body>
+</html>
