@@ -21,6 +21,16 @@ def test_dashboard_is_served() -> None:
 
     assert response.status_code == 200
     assert "Give your project a security check-up" in response.text
+    assert 'id="results"' in response.text
+
+
+def test_dashboard_javascript_is_served() -> None:
+    client = TestClient(create_app())
+
+    response = client.get("/static/app.js")
+
+    assert response.status_code == 200
+    assert 'fetch("/api/scans"' in response.text
 
 
 def test_scan_endpoint_returns_findings(tmp_path: Path) -> None:

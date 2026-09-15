@@ -45,7 +45,26 @@
             >
             <button type="submit">Run check-up</button>
           </div>
+          <p id="form-error" class="form-error" role="alert" hidden></p>
         </form>
+      </section>
+
+      <section id="results" class="results" aria-live="polite" hidden>
+        <div class="results-heading">
+          <div>
+            <p class="step">Scan complete</p>
+            <h2 id="results-title">Project report</h2>
+          </div>
+          <div class="summary">
+            <span><strong id="finding-count">0</strong> findings</span>
+            <span><strong id="file-count">0</strong> files analysed</span>
+          </div>
+        </div>
+        <div id="finding-list" class="finding-list"></div>
+        <div id="scan-errors" class="scan-errors" hidden>
+          <h3>Files needing attention</h3>
+          <ul id="error-list"></ul>
+        </div>
       </section>
 
       <section class="checks" aria-labelledby="checks-heading">
@@ -69,5 +88,6 @@
         </article>
       </section>
     </main>
+    <script src="{{ url_for('static', path='/app.js') }}" defer></script>
   </body>
 </html>
