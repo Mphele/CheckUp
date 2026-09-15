@@ -1,0 +1,72 @@
+import ast
+
+from checkup.models import Confidence, Finding, Severity, SourceLocation
+
+
+SHELL_FUNCTIONS = {
+    "subprocess.call",
+    "subprocess.check_call",
+    "subprocess.check_output",
+    "subprocess.Popen",
+    "subprocess.run",
+}
+
+
+def find_shell_invocations(source: str, relative_path: str) -> list[Finding]:
+    tree = ast.parse(source, filename=relative_path)
+    lines = source.splitlines()
+    findings: list[Finding] = []
+
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Call) or not _invokes_shell(node):
+            continue
+
+        evidence = lines[node.lineno - 1].strip()[:200]
+        findings.append(
+            Finding(
+                rule_id="python.shell-injection",
+                title="Shell command may allow command injection",
+                description=(
+                    "This call invokes a system shell. If any part of the command comes "
+                    "from a user, the user may be able to execute additional commands."
+                ),
+                category="injection",
+                severity=Severity.HIGH,
+                confidence=Confidence.MEDIUM,
+                location=SourceLocation(path=relative_path, line=node.lineno),
+                evidence=evidence,
+                remediation=(
+                    "Pass the program and its arguments as a list without using a shell, "
+                    "and validate any user-controlled values."
+                ),
+            )
+        )
+
+    return findings
+
+
+def _invokes_shell(call: ast.Call) -> bool:
+    function_name = _qualified_name(call.func)
+    if function_name == "os.system":
+        return True
+    if function_name not in SHELL_FUNCTIONS:
+        return False
+
+    return any(
+        keyword.arg == "shell"
+        and isinstance(keyword.value, ast.Constant)
+        and keyword.value.value is True
+        for keyword in call.keywords
+    )
+
+
+def _qualified_name(node: ast.expr) -> str | None:
+    parts: list[str] = []
+    while isinstance(node, ast.Attribute):
+        parts.append(node.attr)
+        node = node.value
+    if isinstance(node, ast.Name):
+        parts.append(node.id)
+        return ".".join(reversed(parts))
+    return None
+
