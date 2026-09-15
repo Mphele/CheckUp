@@ -44,3 +44,7 @@ class ScanReport(BaseModel):
     files_analyzed: int
     findings: list[Finding]
     errors: list[ScanError]
+
+
+class ScanRequest(BaseModel):
+    project_path: str = Field(min_length=1)
