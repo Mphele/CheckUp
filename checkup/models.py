@@ -32,3 +32,15 @@ class Finding(BaseModel):
     evidence: str
     remediation: str
 
+
+class ScanError(BaseModel):
+    path: str
+    message: str
+
+
+class ScanReport(BaseModel):
+    project_name: str
+    files_discovered: int
+    files_analyzed: int
+    findings: list[Finding]
+    errors: list[ScanError]
