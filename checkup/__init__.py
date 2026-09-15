@@ -1,0 +1,2 @@
+"""CheckUp application package."""
+

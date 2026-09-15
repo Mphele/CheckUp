@@ -1,0 +1,19 @@
+[project]
+name = "checkup"
+version = "0.1.0"
+description = "A local security review assistant for FastAPI projects"
+requires-python = ">=3.11"
+dependencies = [
+    "fastapi>=0.115,<1.0",
+    "uvicorn[standard]>=0.34,<1.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "httpx>=0.28,<1.0",
+    "pytest>=8.3,<10.0",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
