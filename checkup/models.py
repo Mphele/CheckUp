@@ -48,3 +48,11 @@ class ScanReport(BaseModel):
 
 class ScanRequest(BaseModel):
     project_path: str = Field(min_length=1)
+
+
+class RouteInfo(BaseModel):
+    path: str
+    method: str
+    handler: str
+    parameters: list[str]
+    location: SourceLocation
