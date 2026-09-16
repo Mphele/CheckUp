@@ -58,9 +58,23 @@
           <div class="summary">
             <span><strong id="finding-count">0</strong> findings</span>
             <span><strong id="file-count">0</strong> files analysed</span>
+            <span><strong id="route-count">0</strong> API routes</span>
           </div>
         </div>
         <div id="finding-list" class="finding-list"></div>
+        <div id="route-map" class="route-map" hidden>
+          <div class="route-map-heading">
+            <div>
+              <p class="step">FastAPI surface</p>
+              <h3>Discovered routes</h3>
+            </div>
+            <p>
+              Security dependencies are inferred from this file. Router-level or
+              middleware protection may not be visible here.
+            </p>
+          </div>
+          <div id="route-list" class="route-list"></div>
+        </div>
         <div id="scan-errors" class="scan-errors" hidden>
           <h3>Files needing attention</h3>
           <ul id="error-list"></ul>

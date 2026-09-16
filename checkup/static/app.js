@@ -6,6 +6,8 @@ const results = document.querySelector("#results");
 const findingList = document.querySelector("#finding-list");
 const errorPanel = document.querySelector("#scan-errors");
 const errorList = document.querySelector("#error-list");
+const routeMap = document.querySelector("#route-map");
+const routeList = document.querySelector("#route-list");
 
 form.addEventListener("submit", async (event) => {
   event.preventDefault();
@@ -43,8 +45,10 @@ function renderReport(report) {
   document.querySelector("#results-title").textContent = `${report.project_name} report`;
   document.querySelector("#finding-count").textContent = report.findings.length;
   document.querySelector("#file-count").textContent = report.files_analyzed;
+  document.querySelector("#route-count").textContent = report.routes.length;
   findingList.replaceChildren();
   errorList.replaceChildren();
+  routeList.replaceChildren();
 
   if (report.findings.length === 0) {
     const empty = document.createElement("p");
@@ -60,9 +64,41 @@ function renderReport(report) {
     item.textContent = `${error.path}: ${error.message}`;
     errorList.append(item);
   });
+  report.routes.forEach((route) => routeList.append(createRoute(route)));
+  routeMap.hidden = report.routes.length === 0;
   errorPanel.hidden = report.errors.length === 0;
   results.hidden = false;
   results.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+function createRoute(route) {
+  const article = document.createElement("article");
+  article.className = "route";
+
+  const method = document.createElement("span");
+  method.className = "route-method";
+  method.textContent = route.method;
+
+  const path = document.createElement("span");
+  path.className = "route-path";
+  path.textContent = route.path;
+
+  const detail = document.createElement("div");
+  detail.className = "route-detail";
+  const source = document.createElement("div");
+  source.textContent = `${route.handler} · ${route.location.path}:${route.location.line}`;
+  const security = document.createElement("div");
+  security.className = "route-security";
+  if (route.security_dependencies.length > 0) {
+    security.textContent = `Visible security: ${route.security_dependencies.join(", ")}`;
+  } else {
+    security.classList.add("review");
+    security.textContent = "Review access control: no route-level security dependency found";
+  }
+  detail.append(source, security);
+
+  article.append(method, path, detail);
+  return article;
 }
 
 function createFinding(finding) {
