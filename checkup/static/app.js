@@ -8,6 +8,11 @@ const errorPanel = document.querySelector("#scan-errors");
 const errorList = document.querySelector("#error-list");
 const routeMap = document.querySelector("#route-map");
 const routeList = document.querySelector("#route-list");
+const severityFilter = document.querySelector("#severity-filter");
+const severityRanks = { low: 1, medium: 2, high: 3, critical: 4 };
+let currentFindings = [];
+
+severityFilter.addEventListener("change", renderFilteredFindings);
 
 form.addEventListener("submit", async (event) => {
   event.preventDefault();
@@ -50,14 +55,9 @@ function renderReport(report) {
   errorList.replaceChildren();
   routeList.replaceChildren();
 
-  if (report.findings.length === 0) {
-    const empty = document.createElement("p");
-    empty.className = "empty-result";
-    empty.textContent = "No findings were detected by the checks currently available.";
-    findingList.append(empty);
-  } else {
-    report.findings.forEach((finding) => findingList.append(createFinding(finding)));
-  }
+  currentFindings = report.findings;
+  severityFilter.value = "all";
+  renderFilteredFindings();
 
   report.errors.forEach((error) => {
     const item = document.createElement("li");
@@ -69,6 +69,27 @@ function renderReport(report) {
   errorPanel.hidden = report.errors.length === 0;
   results.hidden = false;
   results.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+function renderFilteredFindings() {
+  const minimum = severityFilter.value;
+  const visibleFindings = minimum === "all"
+    ? currentFindings
+    : currentFindings.filter(
+      (finding) => severityRanks[finding.severity] >= severityRanks[minimum],
+    );
+  findingList.replaceChildren();
+
+  if (visibleFindings.length === 0) {
+    const empty = document.createElement("p");
+    empty.className = "empty-result";
+    empty.textContent = currentFindings.length === 0
+      ? "No findings were detected by the checks currently available."
+      : "No findings match this severity filter.";
+    findingList.append(empty);
+  } else {
+    visibleFindings.forEach((finding) => findingList.append(createFinding(finding)));
+  }
 }
 
 function createRoute(route) {
@@ -103,16 +124,21 @@ function createRoute(route) {
 
 function createFinding(finding) {
   const article = document.createElement("article");
-  article.className = "finding";
+  article.className = `finding severity-${finding.severity}`;
 
   const topline = document.createElement("div");
   topline.className = "finding-topline";
   const title = document.createElement("h3");
   title.textContent = finding.title;
   const severity = document.createElement("span");
-  severity.className = "severity";
+  severity.className = `severity ${finding.severity}`;
   severity.textContent = finding.severity;
-  topline.append(title, severity);
+  const confidence = document.createElement("span");
+  confidence.className = "confidence";
+  confidence.textContent = `${finding.confidence} confidence`;
+  const labels = document.createElement("div");
+  labels.append(severity, confidence);
+  topline.append(title, labels);
 
   const location = document.createElement("p");
   location.className = "location";

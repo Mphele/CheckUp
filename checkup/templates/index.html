@@ -61,6 +61,15 @@
             <span><strong id="route-count">0</strong> API routes</span>
           </div>
         </div>
+        <div class="result-tools">
+          <label for="severity-filter">Minimum severity</label>
+          <select id="severity-filter">
+            <option value="all">Show all</option>
+            <option value="medium">Medium and above</option>
+            <option value="high">High and critical</option>
+            <option value="critical">Critical only</option>
+          </select>
+        </div>
         <div id="finding-list" class="finding-list"></div>
         <div id="route-map" class="route-map" hidden>
           <div class="route-map-heading">

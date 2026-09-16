@@ -23,6 +23,7 @@ def test_dashboard_is_served() -> None:
     assert "Give your project a security check-up" in response.text
     assert 'id="results"' in response.text
     assert 'id="route-map"' in response.text
+    assert 'id="severity-filter"' in response.text
 
 
 def test_dashboard_javascript_is_served() -> None:
@@ -33,6 +34,7 @@ def test_dashboard_javascript_is_served() -> None:
     assert response.status_code == 200
     assert 'fetch("/api/scans"' in response.text
     assert "Review access control" in response.text
+    assert "finding.confidence" in response.text
 
 
 def test_scan_endpoint_returns_findings(tmp_path: Path) -> None:
