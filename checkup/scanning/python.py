@@ -11,6 +11,17 @@ SHELL_FUNCTIONS = {
     "subprocess.run",
 }
 DYNAMIC_EXECUTION_FUNCTIONS = {"builtins.eval", "builtins.exec", "eval", "exec"}
+HTTP_FUNCTIONS = {
+    "requests.delete",
+    "requests.get",
+    "requests.head",
+    "requests.options",
+    "requests.patch",
+    "requests.post",
+    "requests.put",
+    "requests.request",
+}
+HTTP_CLIENTS = {"httpx.AsyncClient", "httpx.Client", "requests.Session"}
 
 
 def find_shell_invocations(source: str, relative_path: str) -> list[Finding]:
@@ -81,6 +92,43 @@ def find_dynamic_code_execution(source: str, relative_path: str) -> list[Finding
     return findings
 
 
+def find_disabled_tls_verification(source: str, relative_path: str) -> list[Finding]:
+    tree = ast.parse(source, filename=relative_path)
+    lines = source.splitlines()
+    findings: list[Finding] = []
+
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Call):
+            continue
+        function_name = _qualified_name(node.func)
+        if function_name not in HTTP_FUNCTIONS | HTTP_CLIENTS:
+            continue
+        if not _has_false_keyword(node, "verify"):
+            continue
+
+        findings.append(
+            Finding(
+                rule_id="python.disabled-tls-verification",
+                title="TLS certificate verification is disabled",
+                description=(
+                    "This request accepts certificates that cannot be verified. An attacker "
+                    "on the network may be able to intercept or alter the connection."
+                ),
+                category="transport-security",
+                severity=Severity.MEDIUM,
+                confidence=Confidence.HIGH,
+                location=SourceLocation(path=relative_path, line=node.lineno),
+                evidence=lines[node.lineno - 1].strip()[:200],
+                remediation=(
+                    "Enable certificate verification. For a private certificate authority, "
+                    "provide its trusted CA bundle instead of using verify=False."
+                ),
+            )
+        )
+
+    return findings
+
+
 def _invokes_shell(call: ast.Call) -> bool:
     function_name = _qualified_name(call.func)
     if function_name == "os.system":
@@ -105,3 +153,12 @@ def _qualified_name(node: ast.expr) -> str | None:
         parts.append(node.id)
         return ".".join(reversed(parts))
     return None
+
+
+def _has_false_keyword(call: ast.Call, keyword_name: str) -> bool:
+    return any(
+        keyword.arg == keyword_name
+        and isinstance(keyword.value, ast.Constant)
+        and keyword.value.value is False
+        for keyword in call.keywords
+    )

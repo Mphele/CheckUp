@@ -3,7 +3,11 @@ from pathlib import Path
 from checkup.models import Finding, RouteInfo, ScanError, ScanReport
 from checkup.scanning.fastapi import find_fastapi_routes
 from checkup.scanning.files import discover_files
-from checkup.scanning.python import find_dynamic_code_execution, find_shell_invocations
+from checkup.scanning.python import (
+    find_disabled_tls_verification,
+    find_dynamic_code_execution,
+    find_shell_invocations,
+)
 from checkup.scanning.secrets import find_exposed_secrets
 
 
@@ -25,6 +29,9 @@ def scan_project(project_root: Path) -> ScanReport:
                 )
                 findings.extend(
                     find_dynamic_code_execution(source, project_file.relative_path)
+                )
+                findings.extend(
+                    find_disabled_tls_verification(source, project_file.relative_path)
                 )
                 routes.extend(find_fastapi_routes(source, project_file.relative_path))
             files_analyzed += 1

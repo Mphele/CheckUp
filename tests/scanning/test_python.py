@@ -1,7 +1,11 @@
 import pytest
 
 from checkup.models import Confidence, Severity
-from checkup.scanning.python import find_dynamic_code_execution, find_shell_invocations
+from checkup.scanning.python import (
+    find_disabled_tls_verification,
+    find_dynamic_code_execution,
+    find_shell_invocations,
+)
 
 
 @pytest.mark.parametrize(
@@ -54,3 +58,26 @@ def test_ignores_literal_eval() -> None:
     source = "result = ast.literal_eval(user_input)"
 
     assert find_dynamic_code_execution(source, "app/calculator.py") == []
+
+
+@pytest.mark.parametrize(
+    "source",
+    [
+        'requests.get("https://example.com", verify=False)',
+        "httpx.Client(verify=False)",
+        "httpx.AsyncClient(verify=False)",
+    ],
+)
+def test_finds_disabled_tls_verification(source: str) -> None:
+    findings = find_disabled_tls_verification(source, "app/client.py")
+
+    assert len(findings) == 1
+    assert findings[0].rule_id == "python.disabled-tls-verification"
+    assert findings[0].severity is Severity.MEDIUM
+    assert findings[0].confidence is Confidence.HIGH
+
+
+def test_ignores_enabled_tls_verification() -> None:
+    source = 'requests.get("https://example.com", verify=True)'
+
+    assert find_disabled_tls_verification(source, "app/client.py") == []
