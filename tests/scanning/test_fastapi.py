@@ -1,4 +1,5 @@
-from checkup.scanning.fastapi import find_fastapi_routes
+from checkup.models import Confidence
+from checkup.scanning.fastapi import find_fastapi_routes, find_request_input_flows
 
 
 def test_discovers_fastapi_route_details() -> None:
@@ -71,3 +72,51 @@ def delete_user(user_id: int):
 
     assert route.dependencies == ["require_admin"]
     assert route.security_dependencies == ["require_admin"]
+
+
+def test_traces_route_input_to_shell_command() -> None:
+    source = '''
+@router.get("/lookup")
+def lookup(host: str):
+    command = f"nslookup {host}"
+    return subprocess.run(command, shell=True)
+'''
+
+    findings = find_request_input_flows(source, "app/routes.py")
+
+    assert len(findings) == 1
+    assert findings[0].rule_id == "fastapi.request-to-shell"
+    assert findings[0].confidence is Confidence.HIGH
+    assert findings[0].location.line == 5
+
+
+def test_traces_route_input_to_dynamic_execution() -> None:
+    source = '''
+@router.post("/calculate")
+def calculate(expression: str):
+    return eval(expression)
+'''
+
+    findings = find_request_input_flows(source, "app/routes.py")
+
+    assert findings[0].rule_id == "fastapi.request-to-dynamic-code"
+
+
+def test_does_not_treat_dependency_result_as_request_input() -> None:
+    source = '''
+@router.get("/internal")
+def internal(command = Depends(trusted_command)):
+    return os.system(command)
+'''
+
+    assert find_request_input_flows(source, "app/routes.py") == []
+
+
+def test_ignores_safe_use_of_route_input() -> None:
+    source = '''
+@router.get("/users/{user_id}")
+def get_user(user_id: int):
+    return database.get(user_id)
+'''
+
+    assert find_request_input_flows(source, "app/routes.py") == []

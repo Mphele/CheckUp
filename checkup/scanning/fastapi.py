@@ -1,6 +1,6 @@
 import ast
 
-from checkup.models import RouteInfo, SourceLocation
+from checkup.models import Confidence, Finding, RouteInfo, Severity, SourceLocation
 
 
 ROUTE_METHODS = {"delete", "get", "head", "options", "patch", "post", "put"}
@@ -14,6 +14,14 @@ SECURITY_NAME_PARTS = {
     "token",
     "verify",
 }
+SHELL_CALLS = {
+    "subprocess.call",
+    "subprocess.check_call",
+    "subprocess.check_output",
+    "subprocess.Popen",
+    "subprocess.run",
+}
+DYNAMIC_CALLS = {"builtins.eval", "builtins.exec", "eval", "exec"}
 
 
 def find_fastapi_routes(source: str, relative_path: str) -> list[RouteInfo]:
@@ -44,6 +52,54 @@ def find_fastapi_routes(source: str, relative_path: str) -> list[RouteInfo]:
             )
 
     return routes
+
+
+def find_request_input_flows(source: str, relative_path: str) -> list[Finding]:
+    tree = ast.parse(source, filename=relative_path)
+    lines = source.splitlines()
+    findings: list[Finding] = []
+
+    for function in ast.walk(tree):
+        if not isinstance(function, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            continue
+        if not any(
+            _route_from_decorator(decorator) is not None
+            for decorator in function.decorator_list
+        ):
+            continue
+
+        tainted_names = _request_parameter_names(function.args)
+        _propagate_assignments(function, tainted_names)
+
+        for node in ast.walk(function):
+            if not isinstance(node, ast.Call) or not node.args:
+                continue
+            sink = _dangerous_sink(node)
+            if sink is None or not _references_names(node.args[0], tainted_names):
+                continue
+
+            findings.append(
+                Finding(
+                    rule_id=f"fastapi.request-to-{sink}",
+                    title="Request input reaches a dangerous operation",
+                    description=(
+                        f"A FastAPI input reaches {sink.replace('-', ' ')} in the same "
+                        "route handler. A crafted request may be able to change the "
+                        "operation that the server performs."
+                    ),
+                    category="injection",
+                    severity=Severity.HIGH,
+                    confidence=Confidence.HIGH,
+                    location=SourceLocation(path=relative_path, line=node.lineno),
+                    evidence=lines[node.lineno - 1].strip()[:200],
+                    remediation=(
+                        "Do not pass request-controlled values to this operation. Use a "
+                        "fixed set of allowed operations and validate values against it."
+                    ),
+                )
+            )
+
+    return findings
 
 
 def _route_from_decorator(
@@ -123,3 +179,82 @@ def _qualified_name(node: ast.expr) -> str | None:
 def _looks_security_related(name: str) -> bool:
     lowered = name.lower()
     return any(part in lowered for part in SECURITY_NAME_PARTS)
+
+
+def _request_parameter_names(arguments: ast.arguments) -> set[str]:
+    names: set[str] = set()
+    positional = [*arguments.posonlyargs, *arguments.args]
+    padded_defaults: list[ast.expr | None] = [None] * (
+        len(positional) - len(arguments.defaults)
+    ) + list(arguments.defaults)
+
+    for parameter, default in zip(positional, padded_defaults, strict=True):
+        if parameter.arg not in {"self", "cls"} and not _is_dependency(default):
+            names.add(parameter.arg)
+    for parameter, default in zip(
+        arguments.kwonlyargs, arguments.kw_defaults, strict=True
+    ):
+        if not _is_dependency(default):
+            names.add(parameter.arg)
+    return names
+
+
+def _is_dependency(node: ast.expr | None) -> bool:
+    if not isinstance(node, ast.Call):
+        return False
+    name = _qualified_name(node.func)
+    return bool(name and name.rsplit(".", 1)[-1] in {"Depends", "Security"})
+
+
+def _propagate_assignments(
+    function: ast.FunctionDef | ast.AsyncFunctionDef,
+    tainted_names: set[str],
+) -> None:
+    assignments: list[tuple[ast.expr, ast.expr]] = []
+    for node in ast.walk(function):
+        if isinstance(node, ast.Assign):
+            assignments.extend((target, node.value) for target in node.targets)
+        elif isinstance(node, ast.AnnAssign) and node.value is not None:
+            assignments.append((node.target, node.value))
+
+    changed = True
+    while changed:
+        changed = False
+        for target, value in assignments:
+            if not _references_names(value, tainted_names):
+                continue
+            for name in _assigned_names(target):
+                if name not in tainted_names:
+                    tainted_names.add(name)
+                    changed = True
+
+
+def _assigned_names(target: ast.expr) -> set[str]:
+    return {
+        node.id
+        for node in ast.walk(target)
+        if isinstance(node, ast.Name)
+    }
+
+
+def _references_names(node: ast.AST, names: set[str]) -> bool:
+    return any(
+        isinstance(child, ast.Name) and child.id in names
+        for child in ast.walk(node)
+    )
+
+
+def _dangerous_sink(call: ast.Call) -> str | None:
+    function_name = _qualified_name(call.func)
+    if function_name in DYNAMIC_CALLS:
+        return "dynamic-code"
+    if function_name == "os.system":
+        return "shell"
+    if function_name in SHELL_CALLS and any(
+        keyword.arg == "shell"
+        and isinstance(keyword.value, ast.Constant)
+        and keyword.value.value is True
+        for keyword in call.keywords
+    ):
+        return "shell"
+    return None
