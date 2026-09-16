@@ -1,7 +1,7 @@
 import pytest
 
 from checkup.models import Confidence, Severity
-from checkup.scanning.python import find_shell_invocations
+from checkup.scanning.python import find_dynamic_code_execution, find_shell_invocations
 
 
 @pytest.mark.parametrize(
@@ -36,3 +36,21 @@ def test_reports_the_call_line() -> None:
 
     assert findings[0].location.line == 2
     assert findings[0].evidence == "return os.system(command)"
+
+
+@pytest.mark.parametrize("function_name", ["eval", "exec", "builtins.eval"])
+def test_finds_dynamic_code_execution(function_name: str) -> None:
+    source = f"result = {function_name}(user_input)"
+
+    findings = find_dynamic_code_execution(source, "app/calculator.py")
+
+    assert len(findings) == 1
+    assert findings[0].rule_id == "python.dynamic-code-execution"
+    assert findings[0].severity is Severity.HIGH
+    assert findings[0].location.line == 1
+
+
+def test_ignores_literal_eval() -> None:
+    source = "result = ast.literal_eval(user_input)"
+
+    assert find_dynamic_code_execution(source, "app/calculator.py") == []

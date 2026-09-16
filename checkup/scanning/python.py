@@ -10,6 +10,7 @@ SHELL_FUNCTIONS = {
     "subprocess.Popen",
     "subprocess.run",
 }
+DYNAMIC_EXECUTION_FUNCTIONS = {"builtins.eval", "builtins.exec", "eval", "exec"}
 
 
 def find_shell_invocations(source: str, relative_path: str) -> list[Finding]:
@@ -45,6 +46,41 @@ def find_shell_invocations(source: str, relative_path: str) -> list[Finding]:
     return findings
 
 
+def find_dynamic_code_execution(source: str, relative_path: str) -> list[Finding]:
+    tree = ast.parse(source, filename=relative_path)
+    lines = source.splitlines()
+    findings: list[Finding] = []
+
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Call):
+            continue
+        if _qualified_name(node.func) not in DYNAMIC_EXECUTION_FUNCTIONS:
+            continue
+
+        findings.append(
+            Finding(
+                rule_id="python.dynamic-code-execution",
+                title="Dynamic code execution may run untrusted input",
+                description=(
+                    "This function interprets a string as Python code. If that string "
+                    "can be influenced by a user, arbitrary code may run with the "
+                    "application's permissions."
+                ),
+                category="injection",
+                severity=Severity.HIGH,
+                confidence=Confidence.MEDIUM,
+                location=SourceLocation(path=relative_path, line=node.lineno),
+                evidence=lines[node.lineno - 1].strip()[:200],
+                remediation=(
+                    "Replace dynamic execution with explicit parsing or a restricted "
+                    "operation designed for the expected input format."
+                ),
+            )
+        )
+
+    return findings
+
+
 def _invokes_shell(call: ast.Call) -> bool:
     function_name = _qualified_name(call.func)
     if function_name == "os.system":
@@ -69,4 +105,3 @@ def _qualified_name(node: ast.expr) -> str | None:
         parts.append(node.id)
         return ".".join(reversed(parts))
     return None
-

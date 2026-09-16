@@ -62,3 +62,13 @@ def get_account(user = Depends(get_current_user)):
     assert len(report.routes) == 1
     assert report.routes[0].path == "/account"
     assert report.routes[0].security_dependencies == ["get_current_user"]
+
+
+def test_includes_dynamic_execution_findings(tmp_path: Path) -> None:
+    (tmp_path / "calculator.py").write_text("result = eval(expression)", encoding="utf-8")
+
+    report = scan_project(tmp_path)
+
+    assert [finding.rule_id for finding in report.findings] == [
+        "python.dynamic-code-execution"
+    ]
