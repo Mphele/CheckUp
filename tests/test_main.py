@@ -45,6 +45,7 @@ def test_scan_endpoint_returns_findings(tmp_path: Path) -> None:
     report = response.json()
     assert report["project_name"] == tmp_path.name
     assert report["findings"][0]["rule_id"] == "python.shell-injection"
+    assert report["routes"] == []
 
 
 def test_scan_endpoint_rejects_missing_directory(tmp_path: Path) -> None:

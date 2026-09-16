@@ -45,3 +45,20 @@ def test_scans_configuration_files_without_exposing_secret_values(
     assert report.files_analyzed == 1
     assert report.findings[0].rule_id == "secrets.hardcoded-credential"
     assert secret not in report.model_dump_json()
+
+
+def test_includes_fastapi_routes_in_project_report(tmp_path: Path) -> None:
+    (tmp_path / "routes.py").write_text(
+        '''
+@router.get("/account")
+def get_account(user = Depends(get_current_user)):
+    return user
+''',
+        encoding="utf-8",
+    )
+
+    report = scan_project(tmp_path)
+
+    assert len(report.routes) == 1
+    assert report.routes[0].path == "/account"
+    assert report.routes[0].security_dependencies == ["get_current_user"]

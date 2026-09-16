@@ -38,18 +38,6 @@ class ScanError(BaseModel):
     message: str
 
 
-class ScanReport(BaseModel):
-    project_name: str
-    files_discovered: int
-    files_analyzed: int
-    findings: list[Finding]
-    errors: list[ScanError]
-
-
-class ScanRequest(BaseModel):
-    project_path: str = Field(min_length=1)
-
-
 class RouteInfo(BaseModel):
     path: str
     method: str
@@ -58,3 +46,16 @@ class RouteInfo(BaseModel):
     dependencies: list[str] = Field(default_factory=list)
     security_dependencies: list[str] = Field(default_factory=list)
     location: SourceLocation
+
+
+class ScanReport(BaseModel):
+    project_name: str
+    files_discovered: int
+    files_analyzed: int
+    findings: list[Finding]
+    routes: list[RouteInfo]
+    errors: list[ScanError]
+
+
+class ScanRequest(BaseModel):
+    project_path: str = Field(min_length=1)

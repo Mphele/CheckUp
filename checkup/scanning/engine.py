@@ -1,6 +1,7 @@
 from pathlib import Path
 
-from checkup.models import Finding, ScanError, ScanReport
+from checkup.models import Finding, RouteInfo, ScanError, ScanReport
+from checkup.scanning.fastapi import find_fastapi_routes
 from checkup.scanning.files import discover_files
 from checkup.scanning.python import find_shell_invocations
 from checkup.scanning.secrets import find_exposed_secrets
@@ -10,6 +11,7 @@ def scan_project(project_root: Path) -> ScanReport:
     root = project_root.resolve(strict=True)
     project_files = discover_files(root)
     findings: list[Finding] = []
+    routes: list[RouteInfo] = []
     errors: list[ScanError] = []
     files_analyzed = 0
 
@@ -21,6 +23,7 @@ def scan_project(project_root: Path) -> ScanReport:
                 findings.extend(
                     find_shell_invocations(source, project_file.relative_path)
                 )
+                routes.extend(find_fastapi_routes(source, project_file.relative_path))
             files_analyzed += 1
         except UnicodeDecodeError:
             errors.append(
@@ -49,5 +52,6 @@ def scan_project(project_root: Path) -> ScanReport:
         files_discovered=len(project_files),
         files_analyzed=files_analyzed,
         findings=findings,
+        routes=routes,
         errors=errors,
     )
