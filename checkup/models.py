@@ -55,4 +55,6 @@ class RouteInfo(BaseModel):
     method: str
     handler: str
     parameters: list[str]
+    dependencies: list[str] = Field(default_factory=list)
+    security_dependencies: list[str] = Field(default_factory=list)
     location: SourceLocation

@@ -42,3 +42,32 @@ def calculate_total():
 '''
 
     assert find_fastapi_routes(source, "app/services.py") == []
+
+
+def test_separates_security_and_non_security_dependencies() -> None:
+    source = '''
+@router.get("/account")
+def get_account(
+    database = Depends(get_database),
+    user = Depends(get_current_user),
+):
+    pass
+'''
+
+    route = find_fastapi_routes(source, "app/routes.py")[0]
+
+    assert route.dependencies == ["get_database", "get_current_user"]
+    assert route.security_dependencies == ["get_current_user"]
+
+
+def test_recognizes_route_level_security_dependency() -> None:
+    source = '''
+@router.delete("/users/{user_id}", dependencies=[Security(require_admin)])
+def delete_user(user_id: int):
+    pass
+'''
+
+    route = find_fastapi_routes(source, "app/routes.py")[0]
+
+    assert route.dependencies == ["require_admin"]
+    assert route.security_dependencies == ["require_admin"]
