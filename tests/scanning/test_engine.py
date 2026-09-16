@@ -72,3 +72,20 @@ def test_includes_dynamic_execution_findings(tmp_path: Path) -> None:
     assert [finding.rule_id for finding in report.findings] == [
         "python.dynamic-code-execution"
     ]
+
+
+def test_prefers_contextual_finding_for_fastapi_input_flow(tmp_path: Path) -> None:
+    (tmp_path / "routes.py").write_text(
+        '''
+@router.get("/lookup")
+def lookup(host: str):
+    return subprocess.run(f"nslookup {host}", shell=True)
+''',
+        encoding="utf-8",
+    )
+
+    report = scan_project(tmp_path)
+
+    assert len(report.findings) == 1
+    assert report.findings[0].rule_id == "fastapi.request-to-shell"
+    assert report.findings[0].confidence.value == "high"
