@@ -22,6 +22,7 @@ HTTP_FUNCTIONS = {
     "requests.request",
 }
 HTTP_CLIENTS = {"httpx.AsyncClient", "httpx.Client", "requests.Session"}
+PICKLE_FUNCTIONS = {"pickle.load", "pickle.loads"}
 
 
 def find_shell_invocations(source: str, relative_path: str) -> list[Finding]:
@@ -122,6 +123,41 @@ def find_disabled_tls_verification(source: str, relative_path: str) -> list[Find
                 remediation=(
                     "Enable certificate verification. For a private certificate authority, "
                     "provide its trusted CA bundle instead of using verify=False."
+                ),
+            )
+        )
+
+    return findings
+
+
+def find_unsafe_deserialization(source: str, relative_path: str) -> list[Finding]:
+    tree = ast.parse(source, filename=relative_path)
+    lines = source.splitlines()
+    findings: list[Finding] = []
+
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Call):
+            continue
+        if _qualified_name(node.func) not in PICKLE_FUNCTIONS:
+            continue
+
+        findings.append(
+            Finding(
+                rule_id="python.unsafe-pickle",
+                title="Pickle may execute code while loading data",
+                description=(
+                    "Pickle can execute instructions embedded in serialized data. Loading "
+                    "data from a user, uploaded file, cache, or untrusted service may allow "
+                    "arbitrary code execution."
+                ),
+                category="unsafe-deserialization",
+                severity=Severity.HIGH,
+                confidence=Confidence.MEDIUM,
+                location=SourceLocation(path=relative_path, line=node.lineno),
+                evidence=lines[node.lineno - 1].strip()[:200],
+                remediation=(
+                    "Use a data-only format such as JSON for untrusted input. Only unpickle "
+                    "data whose source and integrity are fully trusted."
                 ),
             )
         )

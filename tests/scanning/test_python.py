@@ -5,6 +5,7 @@ from checkup.scanning.python import (
     find_disabled_tls_verification,
     find_dynamic_code_execution,
     find_shell_invocations,
+    find_unsafe_deserialization,
 )
 
 
@@ -81,3 +82,25 @@ def test_ignores_enabled_tls_verification() -> None:
     source = 'requests.get("https://example.com", verify=True)'
 
     assert find_disabled_tls_verification(source, "app/client.py") == []
+
+
+@pytest.mark.parametrize(
+    "source",
+    [
+        "profile = pickle.load(upload.file)",
+        "profile = pickle.loads(request.body)",
+    ],
+)
+def test_finds_unsafe_pickle_loading(source: str) -> None:
+    findings = find_unsafe_deserialization(source, "app/imports.py")
+
+    assert len(findings) == 1
+    assert findings[0].rule_id == "python.unsafe-pickle"
+    assert findings[0].severity is Severity.HIGH
+    assert findings[0].confidence is Confidence.MEDIUM
+
+
+def test_ignores_pickle_serializing() -> None:
+    source = "payload = pickle.dumps(profile)"
+
+    assert find_unsafe_deserialization(source, "app/exports.py") == []
