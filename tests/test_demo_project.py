@@ -4,6 +4,7 @@ from checkup.scanning.engine import scan_project
 
 
 DEMO_PROJECT = Path(__file__).parents[1] / "examples" / "vulnerable_api"
+SECURE_PROJECT = Path(__file__).parents[1] / "examples" / "secure_api"
 
 
 def test_vulnerable_demo_exercises_current_security_checks() -> None:
@@ -22,6 +23,18 @@ def test_vulnerable_demo_exercises_current_security_checks() -> None:
         "python.unsafe-pickle",
         "secrets.hardcoded-credential",
     } <= rule_ids
+    assert len(report.routes) == 6
+    assert len(report.dependencies) == 2
+    assert report.errors == []
+
+
+def test_corrected_demo_has_no_supported_findings() -> None:
+    report = scan_project(
+        SECURE_PROJECT,
+        vulnerability_lookup=lambda dependencies: [],
+    )
+
+    assert report.findings == []
     assert len(report.routes) == 6
     assert len(report.dependencies) == 2
     assert report.errors == []
