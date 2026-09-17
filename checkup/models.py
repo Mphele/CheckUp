@@ -60,6 +60,7 @@ class ScanReport(BaseModel):
     files_analyzed: int
     findings: list[Finding]
     routes: list[RouteInfo]
+    dependencies: list[Dependency]
     errors: list[ScanError]
 
 

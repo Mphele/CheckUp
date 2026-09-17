@@ -89,3 +89,15 @@ def lookup(host: str):
     assert len(report.findings) == 1
     assert report.findings[0].rule_id == "fastapi.request-to-shell"
     assert report.findings[0].confidence.value == "high"
+
+
+def test_includes_pinned_dependencies_in_project_report(tmp_path: Path) -> None:
+    (tmp_path / "requirements.txt").write_text(
+        "fastapi==0.115.13\nhttpx>=0.28", encoding="utf-8"
+    )
+
+    report = scan_project(tmp_path)
+
+    assert len(report.dependencies) == 1
+    assert report.dependencies[0].name == "fastapi"
+    assert report.dependencies[0].version == "0.115.13"

@@ -1,6 +1,7 @@
 from pathlib import Path
 
-from checkup.models import Finding, RouteInfo, ScanError, ScanReport
+from checkup.models import Dependency, Finding, RouteInfo, ScanError, ScanReport
+from checkup.scanning.dependencies import is_requirements_file, parse_requirements
 from checkup.scanning.fastapi import find_fastapi_routes, find_request_input_flows
 from checkup.scanning.files import discover_files
 from checkup.scanning.python import (
@@ -17,6 +18,7 @@ def scan_project(project_root: Path) -> ScanReport:
     project_files = discover_files(root)
     findings: list[Finding] = []
     routes: list[RouteInfo] = []
+    dependencies: list[Dependency] = []
     errors: list[ScanError] = []
     files_analyzed = 0
 
@@ -24,6 +26,10 @@ def scan_project(project_root: Path) -> ScanReport:
         try:
             source = project_file.path.read_text(encoding="utf-8")
             findings.extend(find_exposed_secrets(source, project_file.relative_path))
+            if is_requirements_file(project_file.relative_path):
+                dependencies.extend(
+                    parse_requirements(source, project_file.relative_path)
+                )
             if project_file.path.suffix.lower() == ".py":
                 generic_findings = [
                     *find_shell_invocations(source, project_file.relative_path),
@@ -71,6 +77,7 @@ def scan_project(project_root: Path) -> ScanReport:
         files_analyzed=files_analyzed,
         findings=findings,
         routes=routes,
+        dependencies=dependencies,
         errors=errors,
     )
 
