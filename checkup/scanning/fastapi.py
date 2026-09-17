@@ -22,6 +22,16 @@ SHELL_CALLS = {
     "subprocess.run",
 }
 DYNAMIC_CALLS = {"builtins.eval", "builtins.exec", "eval", "exec"}
+FILE_CALLS = {
+    "FileResponse",
+    "builtins.open",
+    "open",
+    "os.remove",
+    "os.rename",
+    "os.replace",
+    "os.unlink",
+    "shutil.rmtree",
+}
 
 
 def find_fastapi_routes(source: str, relative_path: str) -> list[RouteInfo]:
@@ -247,6 +257,8 @@ def _dangerous_sink(call: ast.Call) -> str | None:
     function_name = _qualified_name(call.func)
     if function_name in DYNAMIC_CALLS:
         return "dynamic-code"
+    if function_name in FILE_CALLS:
+        return "file-path"
     if function_name == "os.system":
         return "shell"
     if function_name in SHELL_CALLS and any(
@@ -269,6 +281,11 @@ def _flow_remediation(sink: str) -> str:
         return (
             "Use parameter placeholders and pass request values separately through the "
             "database driver's parameter binding."
+        )
+    if sink == "file-path":
+        return (
+            "Resolve the requested path against a fixed application directory, then verify "
+            "that the resolved path remains inside that directory before using it."
         )
     return (
         "Do not pass request-controlled values to this operation. Use a fixed set of "

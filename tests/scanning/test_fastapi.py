@@ -1,3 +1,5 @@
+import pytest
+
 from checkup.models import Confidence
 from checkup.scanning.fastapi import find_fastapi_routes, find_request_input_flows
 
@@ -135,3 +137,35 @@ def find_user(name: str):
     assert len(findings) == 1
     assert findings[0].rule_id == "fastapi.request-to-sql-query"
     assert "parameter placeholders" in findings[0].remediation
+
+
+@pytest.mark.parametrize(
+    "operation",
+    [
+        "open(filename)",
+        "FileResponse(filename)",
+        "os.remove(filename)",
+    ],
+)
+def test_traces_route_input_to_file_operation(operation: str) -> None:
+    source = f'''
+@router.get("/files")
+def get_file(filename: str):
+    return {operation}
+'''
+
+    findings = find_request_input_flows(source, "app/routes.py")
+
+    assert len(findings) == 1
+    assert findings[0].rule_id == "fastapi.request-to-file-path"
+    assert "fixed application directory" in findings[0].remediation
+
+
+def test_ignores_fixed_file_path() -> None:
+    source = '''
+@router.get("/terms")
+def terms():
+    return FileResponse("static/terms.pdf")
+'''
+
+    assert find_request_input_flows(source, "app/routes.py") == []
