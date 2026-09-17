@@ -25,6 +25,7 @@ def test_dashboard_is_served() -> None:
     assert 'id="route-map"' in response.text
     assert 'id="severity-filter"' in response.text
     assert 'id="dependency-report"' in response.text
+    assert 'id="export-report"' in response.text
 
 
 def test_dashboard_javascript_is_served() -> None:
@@ -37,6 +38,7 @@ def test_dashboard_javascript_is_served() -> None:
     assert "Review access control" in response.text
     assert "finding.confidence" in response.text
     assert "dependency_check_performed" in response.text
+    assert "JSON.stringify(currentReport" in response.text
 
 
 def test_scan_endpoint_returns_findings(tmp_path: Path) -> None:

@@ -12,10 +12,13 @@ const dependencyReport = document.querySelector("#dependency-report");
 const dependencyStatus = document.querySelector("#dependency-status");
 const dependencyAlerts = document.querySelector("#dependency-alerts");
 const severityFilter = document.querySelector("#severity-filter");
+const exportButton = document.querySelector("#export-report");
 const severityRanks = { low: 1, medium: 2, high: 3, critical: 4 };
 let currentFindings = [];
+let currentReport = null;
 
 severityFilter.addEventListener("change", renderFilteredFindings);
+exportButton.addEventListener("click", downloadReport);
 
 form.addEventListener("submit", async (event) => {
   event.preventDefault();
@@ -50,6 +53,8 @@ function setLoading(isLoading) {
 }
 
 function renderReport(report) {
+  currentReport = report;
+  exportButton.hidden = false;
   document.querySelector("#results-title").textContent = `${report.project_name} report`;
   document.querySelector("#finding-count").textContent = report.findings.length;
   document.querySelector("#file-count").textContent = report.files_analyzed;
@@ -76,6 +81,24 @@ function renderReport(report) {
   errorPanel.hidden = report.errors.length === 0;
   results.hidden = false;
   results.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+function downloadReport() {
+  if (!currentReport) {
+    return;
+  }
+
+  const safeName = currentReport.project_name.replace(/[^a-z0-9_-]+/gi, "-");
+  const reportFile = new Blob(
+    [JSON.stringify(currentReport, null, 2)],
+    { type: "application/json" },
+  );
+  const downloadUrl = URL.createObjectURL(reportFile);
+  const link = document.createElement("a");
+  link.href = downloadUrl;
+  link.download = `${safeName || "checkup"}-security-report.json`;
+  link.click();
+  URL.revokeObjectURL(downloadUrl);
 }
 
 function renderDependencyReport(report) {
