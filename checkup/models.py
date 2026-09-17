@@ -48,6 +48,12 @@ class RouteInfo(BaseModel):
     location: SourceLocation
 
 
+class Dependency(BaseModel):
+    name: str
+    version: str
+    location: SourceLocation
+
+
 class ScanReport(BaseModel):
     project_name: str
     files_discovered: int
