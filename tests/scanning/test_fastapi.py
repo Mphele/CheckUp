@@ -120,3 +120,18 @@ def get_user(user_id: int):
 '''
 
     assert find_request_input_flows(source, "app/routes.py") == []
+
+
+def test_traces_route_input_to_sql_query() -> None:
+    source = '''
+@router.get("/users")
+def find_user(name: str):
+    query = f"SELECT * FROM users WHERE name = '{name}'"
+    return database.execute(query)
+'''
+
+    findings = find_request_input_flows(source, "app/routes.py")
+
+    assert len(findings) == 1
+    assert findings[0].rule_id == "fastapi.request-to-sql-query"
+    assert "parameter placeholders" in findings[0].remediation

@@ -93,8 +93,7 @@ def find_request_input_flows(source: str, relative_path: str) -> list[Finding]:
                     location=SourceLocation(path=relative_path, line=node.lineno),
                     evidence=lines[node.lineno - 1].strip()[:200],
                     remediation=(
-                        "Do not pass request-controlled values to this operation. Use a "
-                        "fixed set of allowed operations and validate values against it."
+                        _flow_remediation(sink)
                     ),
                 )
             )
@@ -257,4 +256,21 @@ def _dangerous_sink(call: ast.Call) -> str | None:
         for keyword in call.keywords
     ):
         return "shell"
+    if isinstance(call.func, ast.Attribute) and call.func.attr in {
+        "execute",
+        "executemany",
+    }:
+        return "sql-query"
     return None
+
+
+def _flow_remediation(sink: str) -> str:
+    if sink == "sql-query":
+        return (
+            "Use parameter placeholders and pass request values separately through the "
+            "database driver's parameter binding."
+        )
+    return (
+        "Do not pass request-controlled values to this operation. Use a fixed set of "
+        "allowed operations and validate values against it."
+    )

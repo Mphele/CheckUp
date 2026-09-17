@@ -122,6 +122,7 @@ def _prefer_contextual_findings(
     replacements = {
         "fastapi.request-to-shell": "python.shell-injection",
         "fastapi.request-to-dynamic-code": "python.dynamic-code-execution",
+        "fastapi.request-to-sql-query": "python.dynamic-sql-query",
     }
     replaced = {
         (

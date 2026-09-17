@@ -140,3 +140,21 @@ def test_keeps_scan_results_when_vulnerability_service_is_offline(
     assert report.dependency_vulnerabilities == []
     assert report.dependency_check_performed is False
     assert report.errors[0].path == "requirements.txt"
+
+
+def test_prefers_contextual_finding_for_fastapi_sql_flow(tmp_path: Path) -> None:
+    (tmp_path / "routes.py").write_text(
+        '''
+@router.get("/users")
+def find_user(name: str):
+    query = f"SELECT * FROM users WHERE name = '{name}'"
+    return database.execute(query)
+''',
+        encoding="utf-8",
+    )
+
+    report = scan_project(tmp_path)
+
+    assert len(report.findings) == 1
+    assert report.findings[0].rule_id == "fastapi.request-to-sql-query"
+    assert report.findings[0].confidence.value == "high"
