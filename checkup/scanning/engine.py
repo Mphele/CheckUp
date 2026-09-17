@@ -1,9 +1,18 @@
+from collections.abc import Callable
 from pathlib import Path
 
-from checkup.models import Dependency, Finding, RouteInfo, ScanError, ScanReport
+from checkup.models import (
+    Dependency,
+    DependencyVulnerability,
+    Finding,
+    RouteInfo,
+    ScanError,
+    ScanReport,
+)
 from checkup.scanning.dependencies import is_requirements_file, parse_requirements
 from checkup.scanning.fastapi import find_fastapi_routes, find_request_input_flows
 from checkup.scanning.files import discover_files
+from checkup.scanning.osv import VulnerabilityServiceError, query_vulnerabilities
 from checkup.scanning.python import (
     find_disabled_tls_verification,
     find_dynamic_code_execution,
@@ -13,12 +22,20 @@ from checkup.scanning.python import (
 from checkup.scanning.secrets import find_exposed_secrets
 
 
-def scan_project(project_root: Path) -> ScanReport:
+def scan_project(
+    project_root: Path,
+    *,
+    vulnerability_lookup: Callable[
+        [list[Dependency]], list[DependencyVulnerability]
+    ] = query_vulnerabilities,
+) -> ScanReport:
     root = project_root.resolve(strict=True)
     project_files = discover_files(root)
     findings: list[Finding] = []
     routes: list[RouteInfo] = []
     dependencies: list[Dependency] = []
+    dependency_vulnerabilities: list[DependencyVulnerability] = []
+    dependency_check_performed = False
     errors: list[ScanError] = []
     files_analyzed = 0
 
@@ -71,6 +88,18 @@ def scan_project(project_root: Path) -> ScanReport:
                 )
             )
 
+    if dependencies:
+        try:
+            dependency_vulnerabilities = vulnerability_lookup(dependencies)
+            dependency_check_performed = True
+        except VulnerabilityServiceError:
+            errors.append(
+                ScanError(
+                    path=dependencies[0].location.path,
+                    message="Known dependency vulnerabilities could not be checked.",
+                )
+            )
+
     return ScanReport(
         project_name=root.name,
         files_discovered=len(project_files),
@@ -78,6 +107,8 @@ def scan_project(project_root: Path) -> ScanReport:
         findings=findings,
         routes=routes,
         dependencies=dependencies,
+        dependency_vulnerabilities=dependency_vulnerabilities,
+        dependency_check_performed=dependency_check_performed,
         errors=errors,
     )
 

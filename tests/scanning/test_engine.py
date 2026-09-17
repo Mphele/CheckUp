@@ -1,6 +1,8 @@
 from pathlib import Path
 
+from checkup.models import DependencyVulnerability
 from checkup.scanning.engine import scan_project
+from checkup.scanning.osv import VulnerabilityServiceError
 
 
 def test_scans_python_files_and_returns_a_project_report(tmp_path: Path) -> None:
@@ -96,8 +98,45 @@ def test_includes_pinned_dependencies_in_project_report(tmp_path: Path) -> None:
         "fastapi==0.115.13\nhttpx>=0.28", encoding="utf-8"
     )
 
-    report = scan_project(tmp_path)
+    report = scan_project(tmp_path, vulnerability_lookup=lambda dependencies: [])
 
     assert len(report.dependencies) == 1
     assert report.dependencies[0].name == "fastapi"
     assert report.dependencies[0].version == "0.115.13"
+    assert report.dependency_check_performed is True
+
+
+def test_includes_known_dependency_vulnerabilities(tmp_path: Path) -> None:
+    (tmp_path / "requirements.txt").write_text("demo==1.0", encoding="utf-8")
+
+    def lookup(dependencies):
+        return [
+            DependencyVulnerability(
+                advisory_id="GHSA-abcd-1234-5678",
+                package=dependencies[0].name,
+                version=dependencies[0].version,
+                advisory_url="https://osv.dev/vulnerability/GHSA-abcd-1234-5678",
+                location=dependencies[0].location,
+            )
+        ]
+
+    report = scan_project(tmp_path, vulnerability_lookup=lookup)
+
+    assert report.dependency_vulnerabilities[0].package == "demo"
+    assert report.dependency_check_performed is True
+
+
+def test_keeps_scan_results_when_vulnerability_service_is_offline(
+    tmp_path: Path,
+) -> None:
+    (tmp_path / "requirements.txt").write_text("demo==1.0", encoding="utf-8")
+
+    def unavailable(dependencies):
+        raise VulnerabilityServiceError("offline")
+
+    report = scan_project(tmp_path, vulnerability_lookup=unavailable)
+
+    assert report.dependencies[0].name == "demo"
+    assert report.dependency_vulnerabilities == []
+    assert report.dependency_check_performed is False
+    assert report.errors[0].path == "requirements.txt"

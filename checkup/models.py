@@ -69,6 +69,8 @@ class ScanReport(BaseModel):
     findings: list[Finding]
     routes: list[RouteInfo]
     dependencies: list[Dependency]
+    dependency_vulnerabilities: list[DependencyVulnerability]
+    dependency_check_performed: bool
     errors: list[ScanError]
 
 
