@@ -40,11 +40,15 @@ Python 3.11 or 3.12 can be used in place of 3.13.
 ## Run CheckUp
 
 ```powershell
-python -m uvicorn checkup.main:app --reload
+python -m checkup
 ```
 
 Open `http://127.0.0.1:8000`, enter the full path to a local project, and select
 **Run check-up**. Scan reports can be downloaded as JSON.
+
+Use `python -m checkup --reload` while developing CheckUp itself, or `--port 8123`
+to select a different local port. Installing the project also provides the equivalent
+`checkup` command.
 
 For a demonstration, scan `examples/vulnerable_api`. It contains deliberate security
 mistakes and must never be deployed.
@@ -78,4 +82,3 @@ with no findings does not prove that a project is secure.
 
 See [the rule reference](docs/rules.md), [threat model](docs/threat-model.md), and
 [evaluation](docs/evaluation.md) for the reasoning behind the project.
-
