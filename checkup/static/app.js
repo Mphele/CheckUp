@@ -8,6 +8,9 @@ const errorPanel = document.querySelector("#scan-errors");
 const errorList = document.querySelector("#error-list");
 const routeMap = document.querySelector("#route-map");
 const routeList = document.querySelector("#route-list");
+const dependencyReport = document.querySelector("#dependency-report");
+const dependencyStatus = document.querySelector("#dependency-status");
+const dependencyAlerts = document.querySelector("#dependency-alerts");
 const severityFilter = document.querySelector("#severity-filter");
 const severityRanks = { low: 1, medium: 2, high: 3, critical: 4 };
 let currentFindings = [];
@@ -51,9 +54,12 @@ function renderReport(report) {
   document.querySelector("#finding-count").textContent = report.findings.length;
   document.querySelector("#file-count").textContent = report.files_analyzed;
   document.querySelector("#route-count").textContent = report.routes.length;
+  document.querySelector("#dependency-alert-count").textContent =
+    report.dependency_vulnerabilities.length;
   findingList.replaceChildren();
   errorList.replaceChildren();
   routeList.replaceChildren();
+  dependencyAlerts.replaceChildren();
 
   currentFindings = report.findings;
   severityFilter.value = "all";
@@ -66,9 +72,47 @@ function renderReport(report) {
   });
   report.routes.forEach((route) => routeList.append(createRoute(route)));
   routeMap.hidden = report.routes.length === 0;
+  renderDependencyReport(report);
   errorPanel.hidden = report.errors.length === 0;
   results.hidden = false;
   results.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+function renderDependencyReport(report) {
+  dependencyReport.hidden = report.dependencies.length === 0;
+  if (report.dependencies.length === 0) {
+    return;
+  }
+
+  if (!report.dependency_check_performed) {
+    dependencyStatus.textContent =
+      `${report.dependencies.length} pinned dependencies found. The vulnerability database was unavailable.`;
+  } else if (report.dependency_vulnerabilities.length === 0) {
+    dependencyStatus.textContent =
+      `${report.dependencies.length} pinned dependencies checked. No known vulnerabilities were returned.`;
+  } else {
+    dependencyStatus.textContent =
+      `${report.dependencies.length} pinned dependencies checked against OSV.`;
+  }
+
+  report.dependency_vulnerabilities.forEach((vulnerability) => {
+    const article = document.createElement("article");
+    article.className = "dependency-alert";
+    const details = document.createElement("div");
+    const packageName = document.createElement("strong");
+    packageName.textContent = `${vulnerability.package} ${vulnerability.version}`;
+    const advisory = document.createElement("span");
+    advisory.textContent = `${vulnerability.advisory_id} · ${vulnerability.location.path}:${vulnerability.location.line}`;
+    details.append(packageName, advisory);
+
+    const link = document.createElement("a");
+    link.href = vulnerability.advisory_url;
+    link.target = "_blank";
+    link.rel = "noopener noreferrer";
+    link.textContent = "View advisory";
+    article.append(details, link);
+    dependencyAlerts.append(article);
+  });
 }
 
 function renderFilteredFindings() {

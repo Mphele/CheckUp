@@ -59,6 +59,7 @@
             <span><strong id="finding-count">0</strong> findings</span>
             <span><strong id="file-count">0</strong> files analysed</span>
             <span><strong id="route-count">0</strong> API routes</span>
+            <span><strong id="dependency-alert-count">0</strong> dependency alerts</span>
           </div>
         </div>
         <div class="result-tools">
@@ -83,6 +84,14 @@
             </p>
           </div>
           <div id="route-list" class="route-list"></div>
+        </div>
+        <div id="dependency-report" class="dependency-report" hidden>
+          <div>
+            <p class="step">Third-party packages</p>
+            <h3>Dependency review</h3>
+            <p id="dependency-status" class="dependency-status"></p>
+          </div>
+          <div id="dependency-alerts" class="dependency-alerts"></div>
         </div>
         <div id="scan-errors" class="scan-errors" hidden>
           <h3>Files needing attention</h3>
