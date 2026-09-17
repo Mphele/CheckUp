@@ -82,3 +82,5 @@ with no findings does not prove that a project is secure.
 
 See [the rule reference](docs/rules.md), [threat model](docs/threat-model.md), and
 [evaluation](docs/evaluation.md) for the reasoning behind the project.
+
+verification code: WTC-26YFWL5H
