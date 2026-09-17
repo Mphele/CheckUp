@@ -165,6 +165,45 @@ def find_unsafe_deserialization(source: str, relative_path: str) -> list[Finding
     return findings
 
 
+def find_dynamic_sql_execution(source: str, relative_path: str) -> list[Finding]:
+    tree = ast.parse(source, filename=relative_path)
+    lines = source.splitlines()
+    assignments = _assignment_values(tree)
+    findings: list[Finding] = []
+
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Call) or not node.args:
+            continue
+        if not isinstance(node.func, ast.Attribute):
+            continue
+        if node.func.attr not in {"execute", "executemany"}:
+            continue
+        if not _is_constructed_string(node.args[0], assignments, set()):
+            continue
+
+        findings.append(
+            Finding(
+                rule_id="python.dynamic-sql-query",
+                title="SQL query is built dynamically",
+                description=(
+                    "This database query is assembled with string formatting. If any value "
+                    "comes from a user, it may change the query and cause SQL injection."
+                ),
+                category="injection",
+                severity=Severity.HIGH,
+                confidence=Confidence.MEDIUM,
+                location=SourceLocation(path=relative_path, line=node.lineno),
+                evidence=lines[node.lineno - 1].strip()[:200],
+                remediation=(
+                    "Use the database library's parameter placeholders and pass values "
+                    "separately from the SQL statement."
+                ),
+            )
+        )
+
+    return findings
+
+
 def _invokes_shell(call: ast.Call) -> bool:
     function_name = _qualified_name(call.func)
     if function_name == "os.system":
@@ -198,3 +237,31 @@ def _has_false_keyword(call: ast.Call, keyword_name: str) -> bool:
         and keyword.value.value is False
         for keyword in call.keywords
     )
+
+
+def _assignment_values(tree: ast.AST) -> dict[str, ast.expr]:
+    assignments: dict[str, ast.expr] = {}
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Assign):
+            for target in node.targets:
+                if isinstance(target, ast.Name):
+                    assignments[target.id] = node.value
+        elif isinstance(node, ast.AnnAssign) and isinstance(node.target, ast.Name):
+            if node.value is not None:
+                assignments[node.target.id] = node.value
+    return assignments
+
+
+def _is_constructed_string(
+    node: ast.expr,
+    assignments: dict[str, ast.expr],
+    visited: set[str],
+) -> bool:
+    if isinstance(node, (ast.JoinedStr, ast.BinOp)):
+        return True
+    if isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute):
+        return node.func.attr == "format"
+    if isinstance(node, ast.Name) and node.id in assignments and node.id not in visited:
+        visited.add(node.id)
+        return _is_constructed_string(assignments[node.id], assignments, visited)
+    return False

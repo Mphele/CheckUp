@@ -3,6 +3,7 @@ import pytest
 from checkup.models import Confidence, Severity
 from checkup.scanning.python import (
     find_disabled_tls_verification,
+    find_dynamic_sql_execution,
     find_dynamic_code_execution,
     find_shell_invocations,
     find_unsafe_deserialization,
@@ -104,3 +105,25 @@ def test_ignores_pickle_serializing() -> None:
     source = "payload = pickle.dumps(profile)"
 
     assert find_unsafe_deserialization(source, "app/exports.py") == []
+
+
+@pytest.mark.parametrize(
+    "source",
+    [
+        'cursor.execute(f"SELECT * FROM users WHERE name = {name}")',
+        'cursor.execute("SELECT * FROM users WHERE name = \'%s\'" % name)',
+        'query = "SELECT * FROM users WHERE name = {}".format(name)\ncursor.execute(query)',
+    ],
+)
+def test_finds_dynamically_constructed_sql(source: str) -> None:
+    findings = find_dynamic_sql_execution(source, "app/database.py")
+
+    assert len(findings) == 1
+    assert findings[0].rule_id == "python.dynamic-sql-query"
+    assert findings[0].severity is Severity.HIGH
+
+
+def test_ignores_parameterized_sql() -> None:
+    source = 'cursor.execute("SELECT * FROM users WHERE name = ?", (name,))'
+
+    assert find_dynamic_sql_execution(source, "app/database.py") == []

@@ -15,6 +15,7 @@ from checkup.scanning.files import discover_files
 from checkup.scanning.osv import VulnerabilityServiceError, query_vulnerabilities
 from checkup.scanning.python import (
     find_disabled_tls_verification,
+    find_dynamic_sql_execution,
     find_dynamic_code_execution,
     find_shell_invocations,
     find_unsafe_deserialization,
@@ -55,6 +56,7 @@ def scan_project(
                         source, project_file.relative_path
                     ),
                     *find_unsafe_deserialization(source, project_file.relative_path),
+                    *find_dynamic_sql_execution(source, project_file.relative_path),
                 ]
                 contextual_findings = find_request_input_flows(
                     source, project_file.relative_path
