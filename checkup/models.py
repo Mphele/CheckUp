@@ -54,6 +54,14 @@ class Dependency(BaseModel):
     location: SourceLocation
 
 
+class DependencyVulnerability(BaseModel):
+    advisory_id: str
+    package: str
+    version: str
+    advisory_url: str
+    location: SourceLocation
+
+
 class ScanReport(BaseModel):
     project_name: str
     files_discovered: int
