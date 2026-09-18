@@ -32,10 +32,13 @@ From the project folder on Windows PowerShell:
 ```powershell
 py -3.13 -m venv .venv
 .venv\Scripts\Activate.ps1
-python -m pip install -e ".[dev]"
+python -m pip install -r requirements.txt
 ```
 
 Python 3.11 or 3.12 can be used in place of 3.13.
+
+For editable development installs, `python -m pip install -e ".[dev]"` remains
+available through `pyproject.toml`.
 
 ## Run CheckUp
 
