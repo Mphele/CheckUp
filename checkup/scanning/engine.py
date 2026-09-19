@@ -12,6 +12,7 @@ from checkup.models import (
 from checkup.scanning.dependencies import is_requirements_file, parse_requirements
 from checkup.scanning.fastapi import find_fastapi_routes, find_request_input_flows
 from checkup.scanning.files import discover_files
+from checkup.scanning.git import classify_git_file, find_git_root
 from checkup.scanning.osv import VulnerabilityServiceError, query_vulnerabilities
 from checkup.scanning.python import (
     find_disabled_tls_verification,
@@ -39,11 +40,17 @@ def scan_project(
     dependency_check_performed = False
     errors: list[ScanError] = []
     files_analyzed = 0
+    git_root = find_git_root(root)
 
     for project_file in project_files:
         try:
             source = project_file.path.read_text(encoding="utf-8")
-            findings.extend(find_exposed_secrets(source, project_file.relative_path))
+            secret_findings = find_exposed_secrets(source, project_file.relative_path)
+            if secret_findings and git_root is not None:
+                git_status = classify_git_file(git_root, project_file.path)
+                for finding in secret_findings:
+                    finding.git_status = git_status
+            findings.extend(secret_findings)
             if is_requirements_file(project_file.relative_path):
                 dependencies.extend(
                     parse_requirements(source, project_file.relative_path)

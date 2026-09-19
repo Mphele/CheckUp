@@ -210,6 +210,9 @@ function createFinding(finding) {
   const location = document.createElement("p");
   location.className = "location";
   location.textContent = `${finding.location.path}:${finding.location.line}`;
+  if (finding.git_status) {
+    location.textContent += ` · Git: ${finding.git_status}`;
+  }
 
   const description = document.createElement("p");
   description.className = "finding-description";

@@ -7,6 +7,7 @@ confidence describes how directly the source code supports the conclusion.
 | --- | --- | --- | --- |
 | `secrets.hardcoded-credential` | A literal assigned to a security-sensitive name | High | Medium |
 | `secrets.private-key` | A private-key header inside a scanned file | Critical | High |
+| `secrets.private-key-placeholder` | A short or explicitly labelled example key block | Low | High |
 | `python.shell-injection` | A shell-enabled subprocess or `os.system` call | High | Medium |
 | `python.dynamic-code-execution` | `eval` or `exec` | High | Medium |
 | `python.disabled-tls-verification` | Supported HTTP calls with `verify=False` | Medium | High |
@@ -32,8 +33,10 @@ Dependency advisories come from OSV and require an exact version from a pinned
 - Imported aliases such as `import subprocess as sp` are not resolved.
 - Secret detection uses patterns and variable names, so unfamiliar credential formats
   may be missed.
+- Git status is reported for secret findings when the project belongs to a local Git
+  repository. It describes the current checkout and does not prove that a secret was
+  never present under another filename or on a remote branch.
 - Route security classification partly relies on dependency names.
 - Dependency analysis currently supports pinned requirements text files only.
 - Runtime behaviour, infrastructure, middleware configuration, and deployed network
   exposure are outside the current scan.
-

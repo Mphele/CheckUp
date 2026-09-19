@@ -9,7 +9,7 @@ checks with framework-aware route mapping and direct request-input tracing.
 
 ## Current checks
 
-- Hardcoded credentials and private keys, with secret values redacted.
+- Hardcoded credentials and private keys, with redacted values and current Git status.
 - Shell execution through `os.system` and `subprocess` with `shell=True`.
 - Dynamic Python execution through `eval` and `exec`.
 - Disabled TLS certificate verification.

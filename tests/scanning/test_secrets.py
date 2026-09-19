@@ -27,7 +27,11 @@ def test_ignores_environment_variable_lookup() -> None:
 
 
 def test_finds_private_key_without_copying_it_to_evidence() -> None:
-    source = "-----BEGIN RSA PRIVATE KEY-----\nprivate-key-data"
+    source = (
+        "-----BEGIN RSA PRIVATE KEY-----\n"
+        + "A" * 512
+        + "\n-----END RSA PRIVATE KEY-----"
+    )
 
     findings = find_exposed_secrets(source, "deploy.pem")
 
@@ -36,3 +40,16 @@ def test_finds_private_key_without_copying_it_to_evidence() -> None:
     assert findings[0].severity is Severity.CRITICAL
     assert findings[0].confidence is Confidence.HIGH
     assert "RSA" not in findings[0].evidence
+
+
+def test_downgrades_an_obvious_example_private_key() -> None:
+    source = """-----BEGIN PRIVATE KEY-----
+YOUR_PRIVATE_KEY_HERE
+-----END PRIVATE KEY-----"""
+
+    findings = find_exposed_secrets(source, "google-credentials-example.json")
+
+    assert len(findings) == 1
+    assert findings[0].rule_id == "secrets.private-key-placeholder"
+    assert findings[0].severity is Severity.LOW
+    assert "YOUR_PRIVATE_KEY_HERE" not in findings[0].evidence

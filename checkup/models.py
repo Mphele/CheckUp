@@ -16,6 +16,12 @@ class Confidence(StrEnum):
     HIGH = "high"
 
 
+class GitStatus(StrEnum):
+    TRACKED = "tracked"
+    IGNORED = "ignored"
+    UNTRACKED = "untracked"
+
+
 class SourceLocation(BaseModel):
     path: str
     line: int = Field(ge=1)
@@ -31,6 +37,7 @@ class Finding(BaseModel):
     location: SourceLocation
     evidence: str
     remediation: str
+    git_status: GitStatus | None = None
 
 
 class ScanError(BaseModel):
